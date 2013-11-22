@@ -4,35 +4,91 @@ Tutorial
 Function overloading
 ********************
 
-PyExt lets you use funtion overloading with one limitation: all keyword arguments are ignored and not counted towards the argument count. Function overloading can be done either by argument count or argument count and argument types.
-
-Here is an example on function overloading with `overload.argc`:
+PyExt function overloading is simple:
 
 .. code-block:: python
    
-   @overload.argc() # Automatically deduce argument count
-   def x(a, b):
-      print 'Function 1 called'
+   @overload.argc(1)
+   def x(a): print 'Function 1 called'
    
-   @overload.argc(3) # Manually specified the argument count
-   def x(a, b, c):
-      print 'Function 2 called'
+   @overload.argc(2)
+   def x(a, b): print 'Function 2 called'
    
+   x(1)
    x(1, 2)
-   x(1, 2, 3)
 
-And here is an example using `overload.args` (types and arg count):
+Easy, no? Now, if we wanted to overload by types also, we could do this:
 
 .. code-block:: python
    
-   @overload.args
-   # TO BE CONTINUED!!
+   @overload.args(int)
+   def x(a): print 'Function 1 called'
+   
+   @overload.args(str)
+   def x(a): print 'Function 2 called'
+   
+   x(1)
+   x('s')
 
-Runtime modules
+If you're in Python 3, you can also use function annotations by passing ``None`` as the parameter:
+
+.. code-block:: python
+   
+   @overload.args(None)
+   def x(a:int): print 'Function 1 called'
+   
+   @overload.args(None)
+   def x(a:str): print 'Function 2 called'
+   
+   x(1)
+   x('s')
+
+Runtime Modules
 ***************
 
-Runtime modules are complete module objects created at `runtime`. This means one important factor:
+Runtime modules let you create a full module object at runtime. Here's an example:
 
-* ``inspect.getsource`` **will fail**!! This is do to the fact that the module file is set to ``<runtime_module>``, a (presumably) nonexistent file.
+.. code-block:: python
+   
+   mymodule = RuntimeModule.from_objects('module_name', 'module_docstring', a=1, b=2)
+   import mymodule # Module object is added to sys.path
+   print mymodule.a, mymodule.b
 
-Note to self: need to add to horrible tutorial!
+We can also create our module object from a string:
+
+.. code-block:: python
+   
+   mystr = '''
+   a = 1
+   b = 2
+   def do_nothing(x): return 'Nothing'
+   '''
+   RuntimeModule.from_string('module_name', 'module_docstring', mystr)
+   import mymodule
+   print mymodule.a, mymodule.b, mymodule.do_nothing(1)
+
+Switch statement
+****************
+
+Switch statements are just as easy as everything else:
+
+.. code-block:: python
+   
+   with switch('myval') as case:
+       if case(1): print 'Huh?'
+       if case(2): print 'What the...'
+       if case('myval'): print "That's better!"
+
+Tail recursion removal
+**********************
+
+Have you ever had a function that went way over the recursion limit? PyExt has a feature that eliminates that problem:
+
+.. code-block:: python
+   
+   @tail_recurse()
+   def add(a, b):
+       if a == 0: return b
+       return add(a-1, b+1)
+   
+   add(1000000, 1) # Doesn't max the recursion limit!

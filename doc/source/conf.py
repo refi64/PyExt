@@ -91,7 +91,13 @@ pygments_style = 'sphinx'
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-html_theme = 'default'
+try:
+    import sphinx_rtd_theme
+except:
+    html_theme = 'default'
+else:
+    html_theme = 'sphinx_rtd_theme'
+    html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
@@ -242,6 +248,7 @@ def setup(app):
     import inspect
     def test(app, what, name, obj, options, signature, return_annotation):
         if name == 'pyext':
+            obj.__doc__ = ''
             obj.RuntimeModule = obj._RuntimeModule
             obj.overload = obj._overload
             obj.switch = obj._switch
