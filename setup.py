@@ -7,7 +7,7 @@ with open('README.rst', 'r') as f:
     readme = f.read()
 
 setup(name='pyext',
-      version='0.1',
+      version='0.2',
       author='Ryan Gonzalez',
       py_modules=['pyext'],
       long_description=readme,
