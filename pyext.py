@@ -22,7 +22,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 g_backup = globals().copy()
 
-__all__ = ['overload', 'RuntimeModule', 'switch', 'tail_recurse', 'copyfunc', 'set_docstring']
+__all__ = ['overload', 'RuntimeModule', 'switch', 'tail_recurse', 'copyfunc', 'set_docstring', 'annotate']
 
 import sys, inspect, types
 
@@ -314,4 +314,26 @@ def tail_recurse(spec=None):
                     return res
         _newf.__doc__ = f.__doc__
         return _newf
+    return _wrap
+
+def annotate(*args, **kwargs):
+    '''Set function annotations using decorators.
+       
+       :param args: This is a list of annotations for the function, in the order of the function's parameters. For example, ``annotate('Annotation 1', 'Annotation 2')`` will set the annotations of parameter 1 of the function to ``Annotation 1``.
+       
+       :param kwargs: This is a mapping of argument names to annotations. Note that these are applied *after* the argument list, so any args set that way will be overriden by this mapping. If there is a key named `ret`, that will be the annotation for the function's return value.
+       
+       Example::
+           
+           @annotate('This is for parameter 1', b='This is for b', ret='This is the return annotation')
+           def x(a, b):
+               pass'''
+    def _wrap(f):
+        if not hasattr(f, '__annotations__'):
+            f.__annotations__ = {}
+        if 'ret' in kwargs:
+            f.__annotations__['return'] = kwargs.pop('ret')
+        f.__annotations__.update(dict(zip(argspec(f).args, args)))
+        f.__annotations__.update(kwargs)
+        return f
     return _wrap

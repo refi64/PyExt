@@ -48,6 +48,10 @@ class TestPyExt(unittest.TestCase):
             if case(1): x = 3
             if case('x'): x = 4
         self.assertEqual(x, 4)
+    def test_annot(self):
+        @annotate('a', 'b', b=1, c=2, ret='r')
+        def x(a, b, c): pass
+        self.assertEqual(x.__annotations__, {'a': 'a', 'b': 1, 'c': 2, 'return': 'r'})
     if sys.version_info.major == 3:
         def test_overload_args_annot(self):
             def x(a, b): return 0

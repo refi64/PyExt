@@ -11,6 +11,8 @@ Some features:
 - Function overloading
 - Switch statement
 - Runtime module creation
+- Tail recursion removal
+- Python 2 function annotations
 
 Examples:
 
@@ -31,3 +33,8 @@ Switch statement::
        if case(2): print '???'
        if case(1): print 'Phew! It works!'
 
+Function annotations::
+   
+   @annotate(a=1, b=2, ret='return annotation')
+   def x(a, b):
+       return 0

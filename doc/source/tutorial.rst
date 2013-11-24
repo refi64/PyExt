@@ -92,3 +92,23 @@ Have you ever had a function that went way over the recursion limit? PyExt has a
        return add(a-1, b+1)
    
    add(1000000, 1) # Doesn't max the recursion limit!
+
+Function annotations
+********************
+
+PyExt lets you use Python 3's function annotations...on Python 2! Here is an example:
+
+.. code-block:: python
+   
+   @annotate('a', b=1, ret='ret')
+   def x(a, b):
+      return 0
+
+This is equilavent to:
+
+.. code-block:: python3
+   
+   def x(a:'a', b:1) -> 'ret':
+      return 0
+
+Notice that, in the PyExt example, the first argument isn't a keyword arg. This is because PyExt automatically maps varargs to the equilavent function arguments.
