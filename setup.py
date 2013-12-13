@@ -7,9 +7,11 @@ with open('README.rst', 'r') as f:
     readme = f.read()
 
 setup(name='pyext',
-      version='0.3',
+      version='0.3.1',
       author='Ryan Gonzalez',
+      author_email='kirbyfan64sos@gmail.com',
       py_modules=['pyext'],
+      description='Simple Python extensions.',
       long_description=readme,
       classifiers=[
           'License :: OSI Approved :: MIT License',
