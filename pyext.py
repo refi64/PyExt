@@ -22,7 +22,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 g_backup = globals().copy()
 
-__all__ = ['overload', 'RuntimeModule', 'switch', 'tail_recurse', 'copyfunc', 'set_docstring', 'annotate']
+__all__ = ['overload', 'RuntimeModule', 'switch', 'tail_recurse', 'copyfunc', 'set_docstring', 'annotate', 'safe_unpack']
 
 import sys, inspect, types
 
@@ -208,7 +208,7 @@ class _RuntimeModule(object):
     @staticmethod
     @overload.argc(2)
     def from_objects(name, docstring, **d):
-        '''Create a module at runtime from ``d``.
+        '''Create a module at runtime from `d`.
            
            :param name: The module name.
            
@@ -229,7 +229,7 @@ class _RuntimeModule(object):
     @staticmethod
     @overload.argc(3)
     def from_string(name, docstring, s):
-        '''Create a module at runtime from ``s``.
+        '''Create a module at runtime from `s``.
            
            :param name: The module name.
 
@@ -279,7 +279,7 @@ switch = _switch()
 def tail_recurse(spec=None):
     '''Remove tail recursion from a function.
 
-       :param spec: A function that, when given the arguments, returns a bool indicating whether of not to exit. If None, tail recursion is always called unless the function returns a value.
+       :param spec: A function that, when given the arguments, returns a bool indicating whether or not to exit. If ``None,`` tail recursion is always called unless the function returns a value.
        
        .. note::
            
@@ -337,3 +337,30 @@ def annotate(*args, **kwargs):
         f.__annotations__.update(kwargs)
         return f
     return _wrap
+
+def safe_unpack(seq, ln, fill=None):
+    '''Safely unpack a sequence to length `ln`, without raising ValueError. Based on Lua's method of unpacking. Empty values will be filled in with `fill`, while any extra values will be cut off.
+       
+       :param seq: The sequence to unpack.
+       
+       :param ln: The expected length of the sequence.
+       
+       :param fill: The value to substitute if the sequence is too small. Defaults to ``None``.
+       
+       Example::
+           
+           s = 'a:b'
+           a, b = safe_unpack(s.split(':'), 2)
+           # a = 'a'
+           # b = 'b'
+           s = 'a'
+           a, b = safe_unpack(s.split(':'), 2)
+           # a = 'a'
+           # b = None'''
+    if len(seq) > ln:
+        return seq[:ln]
+    elif len(seq) < ln:
+        return seq + type(seq)([fill]*(ln-len(seq)))
+    else:
+        return seq
+

@@ -112,3 +112,50 @@ This is equilavent to:
       return 0
 
 Notice that, in the PyExt example, the first argument isn't a keyword arg. This is because PyExt automatically maps varargs to the equilavent function arguments.
+
+Safe unpacking
+**************
+
+Say you have a string whose value is ``'a:b'``. Now, say you want to split this string at the colon. You'll probably do this:
+
+.. code-block:: python
+   
+   a, b = my_string.split(':')
+
+But what if ``my_string`` doesn't have a colon? You'll have to do this:
+
+.. code-block:: python
+   
+   a, b = my_string.split(':') if ':' in my_string else (my_string, None)
+
+Python 3 lets you simply do this:
+
+.. code-block:: python3
+   
+   a, *b = my_string.split(':')
+
+Also, with string partitioning, you can do this:
+
+.. code-block:: python
+   
+   a, _, b = my_string.partition(':')
+
+But say you're not working on a string. Say you're using a tuple:
+
+.. code-block:: python
+   
+   a, b = my_tuple
+
+If my_tuple isn't big enough or is too big, it'll throw an error. As stated above, Python 3 fixes this. But what if you're using Python 2? PyExt comes with a nifty function called ``safe_unpack`` that lets you do this:
+
+.. code-block:: python
+   
+   a, b = safe_unpack(my_tuple, 2)
+
+The first parameter is the sequence to unpack, while the second is the expected length. If the sequence is too large, the excess values are ignored. If it's too small, ``None`` is substituted in for the extra values.
+
+You can also specify a value other than ``None`` to fill in the extra spaces:
+
+.. code-block:: python
+   
+   a, b = safe_unpack(my_tuple, 2, fill='')

@@ -13,6 +13,7 @@ Some features:
 - Runtime module creation
 - Tail recursion removal
 - Python 2 function annotations
+- Python 2 safe tuple unpacking
 
 Examples:
 

@@ -52,6 +52,11 @@ class TestPyExt(unittest.TestCase):
         @annotate('a', 'b', b=1, c=2, ret='r')
         def x(a, b, c): pass
         self.assertEqual(x.__annotations__, {'a': 'a', 'b': 1, 'c': 2, 'return': 'r'})
+    def test_unpack(self):
+        t = (1, 2, 3)
+        self.assertEqual(safe_unpack(t,2), (1,2))
+        self.assertEqual(safe_unpack(t,4), (1,2,3,None))
+        self.assertEqual(safe_unpack(t,4,fill=0), (1,2,3,0))
     if sys.version_info.major == 3:
         def test_overload_args_annot(self):
             def x(a, b): return 0
