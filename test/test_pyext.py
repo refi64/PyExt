@@ -36,13 +36,7 @@ class TestPyExt(unittest.TestCase):
         self.assertTrue(isinstance(m, types.ModuleType))
         self.assertEqual(m.__doc__, 'doc')
     def test_switch(self):
-        with switch('x') as case:
-            if case('a'): x = 1
-            if case('b'): x = 2
-            if case(1): x = 3
-            if case('x'): x = 4
-        self.assertEqual(x, 4)
-        for case in switch('x'):
+        with switch('x'):
             if case('a'): x = 1
             if case('b'): x = 2
             if case(1): x = 3

@@ -29,7 +29,7 @@ Function overloading::
 
 Switch statement::
    
-   with switch(1) as case:
+   with switch(1):
        if case(0): print 'Awkward...'
        if case(2): print '???'
        if case(1): print 'Phew! It works!'
@@ -39,5 +39,9 @@ Function annotations::
    @annotate(a=1, b=2, ret='return annotation')
    def x(a, b):
        return 0
+
+TODO:
+
+- Add some more tests
 
 .. note:: Please ignore this project's messy commit history(several commits under invalid_email_address, about 20 commits labeled Initial). I was trying to use hg-git and kept goofing stuff up.

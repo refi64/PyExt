@@ -22,7 +22,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 g_backup = globals().copy()
 
-__all__ = ['overload', 'RuntimeModule', 'switch', 'tail_recurse', 'copyfunc', 'set_docstring', 'annotate', 'safe_unpack']
+__all__ = ['overload', 'RuntimeModule', 'switch', 'tail_recurse', 'copyfunc', 'set_docstring', 'annotate', 'safe_unpack', 'modify_function']
 
 import sys, inspect, types
 
@@ -46,45 +46,74 @@ def set_docstring(doc):
         return f
     return _wrap
 
-__copyfunc_docstring = '''
-Copies a funcion.
+__modify_function_doc = '''
+Creates a copy of a function, changing its attributes.
 
-:param f: The function to copy.
+:param globals: Will be added to the function's globals.
 
-Returns: The copied function.'''
+:param name: The new function name. Set to ``None`` to use the function's original name.
+
+:param code: The new function code object. Set to ``None`` to use the function's original code object.
+
+:param defaults: The new function defaults. Set to ``None`` to use the function's original defaults.
+
+:param closure: The new function closure. Set to ``None`` to use the function's original closure.
+
+.. warning:: This function can be potentially dangerous.
+'''
+
+def copyfunc(f):
+   '''Copies a funcion.
+      
+      :param f: The function to copy.
+      
+      :return: The copied function.
+      
+      .. deprecated:: 0.4
+         Use :func:`modify_function` instead.
+      '''
+   return modify_function(f)
 
 if sys.version_info.major == 3:
-    @set_docstring(__copyfunc_docstring)
-    def copyfunc(f):
-        newf = types.FunctionType(f.__code__, f.__globals__, name=f.__name__,
-                                  argdefs=f.__defaults__, closure=f.__closure__)
+    @set_docstring(__modify_function_doc)
+    def modify_function(f, globals={}, name=None, code=None, defaults=None,
+                        closure=None):
+        if code is None: code = f.__code__
+        if name is None: name = f.__name__
+        if defaults is None: defaults = f.__defaults__
+        if closure is None: closure = f.__closure__
+        newf = types.FunctionType(code, dict(f.__globals__, **globals), name=name,
+                                  argdefs=defaults, closure=closure)
         newf.__dict__.update(f.__dict__)
         return newf
     def argspec(f):
         return inspect.getfullargspec(f)
     def _exec(s, g):
         exec(s, g)
-    ofullargspec = copyfunc(inspect.getfullargspec)
+    ofullargspec = inspect.getfullargspec
     def _fullargspec(func):
         return __targspec(func, ofullargspec)
     inspect.getfullargspec = _fullargspec
 else:
-    @set_docstring(__copyfunc_docstring)
-    def copyfunc(f):
-        newf = types.FunctionType(f.func_code, f.func_globals, name=f.__name__,
-                                  argdefs=f.func_defaults, closure=f.func_closure)
+    @set_docstring(__modify_function_doc)
+    def modify_function(f, globals={}, name=None, code=None, defaults=None,
+                        closure=None):
+        if code is None: code = f.func_code
+        if name is None: name = f.__name__
+        if defaults is None: defaults = f.func_defaults
+        if closure is None: closure = f.func_closure
+        newf = types.FunctionType(code, dict(f.func_globals, **globals), name=name,
+                                  argdefs=defaults, closure=closure)
         newf.__dict__.update(f.__dict__)
         return newf
     def argspec(f):
         return inspect.getargspec(f)
     eval(compile('def _exec(s, g): exec s in g', '<exec_function>', 'exec'))
 
-del __copyfunc_docstring # Prevent it from being exported
-
 def _gettypes(args):
     return tuple(map(type, args))
 
-oargspec = copyfunc(inspect.getargspec)
+oargspec = inspect.getargspec
 
 def _argspec(func):
     return __targspec(func, oargspec)
@@ -97,7 +126,7 @@ except ImportError:
     IPython = None
 else:
     # Replace IPython's argspec
-    oipyargspec = copyfunc(IPython.core.oinspect.getargspec)
+    oipyargspec = IPython.core.oinspect.getargspec
     def _ipyargspec(func):
         return __targspec(func, oipyargspec, '__orig_arg_ipy__')
     IPython.core.oinspect.getargspec = _ipyargspec
@@ -260,19 +289,25 @@ class _switch(object):
 
        :param value: The value to "switch".
 
+       ``with`` statement example::
+
+           with switch('x'):
+               if case(1): print 'Huh?'
+               if case('x'): print 'It works!!!'
+       
        Iterator example::
 
            for case in switch('x'):
                if case(1): print 'Huh?'
                if case('x'): print 'It works!!!'
-
-       ``with`` statement example::
-
-           with switch('x') as case:
-               if case(1): print 'Huh?'
-               if case('x'): print 'It works!!!' '''
+       
+       .. warning:: If you modify a variable named "case" in the same scope that you use the ``with`` statement version, you will get an UnboundLocalError. The soluction is to use ``with switch('x') as case:`` instead of ``with switch('x'):``.
+       
+       .. warning:: Using as an iterator is DEPRECATED!'''
     def __call__(self, value):
-        return CaseObject(value)
+        res = CaseObject(value)
+        inspect.stack()[1][0].f_globals['case'] = res
+        return res
 
 switch = _switch()
 
