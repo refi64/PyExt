@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2013 Ryan Gonzalez
+Copyright (C) 2014 Ryan Gonzalez
 
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -22,7 +22,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 g_backup = globals().copy()
 
-__all__ = ['overload', 'RuntimeModule', 'switch', 'tail_recurse', 'copyfunc', 'set_docstring', 'annotate', 'safe_unpack', 'modify_function']
+__all__ = ['overload', 'RuntimeModule', 'switch', 'tail_recurse', 'copyfunc', 'set_docstring', 'annotate', 'safe_unpack', 'modify_function', 'assign', 'fannotate']
 
 import sys, inspect, types
 
@@ -285,7 +285,7 @@ class CaseObject(object):
         pass
 
 class _switch(object):
-    '''A Python switch statement implementation that can be used either with a ``with`` statement or as an iterator.
+    '''A Python switch statement implementation that is usedr with a ``with`` statement.
 
        :param value: The value to "switch".
 
@@ -295,15 +295,7 @@ class _switch(object):
                if case(1): print 'Huh?'
                if case('x'): print 'It works!!!'
        
-       Iterator example::
-
-           for case in switch('x'):
-               if case(1): print 'Huh?'
-               if case('x'): print 'It works!!!'
-       
-       .. warning:: If you modify a variable named "case" in the same scope that you use the ``with`` statement version, you will get an UnboundLocalError. The soluction is to use ``with switch('x') as case:`` instead of ``with switch('x'):``.
-       
-       .. warning:: Using as an iterator is DEPRECATED!'''
+       .. warning:: If you modify a variable named "case" in the same scope that you use the ``with`` statement version, you will get an UnboundLocalError. The soluction is to use ``with switch('x') as case:`` instead of ``with switch('x'):``.'''
     def __call__(self, value):
         res = CaseObject(value)
         inspect.stack()[1][0].f_globals['case'] = res
@@ -358,17 +350,38 @@ def annotate(*args, **kwargs):
        
        :param kwargs: This is a mapping of argument names to annotations. Note that these are applied *after* the argument list, so any args set that way will be overriden by this mapping. If there is a key named `ret`, that will be the annotation for the function's return value.
        
-       Example::
-           
-           @annotate('This is for parameter 1', b='This is for b', ret='This is the return annotation')
-           def x(a, b):
-               pass'''
+       .. deprecated:: 0.5
+         Use :func:`fannotate` instead.
+'''       
     def _wrap(f):
         if not hasattr(f, '__annotations__'):
             f.__annotations__ = {}
         if 'ret' in kwargs:
             f.__annotations__['return'] = kwargs.pop('ret')
         f.__annotations__.update(dict(zip(argspec(f).args, args)))
+        f.__annotations__.update(kwargs)
+        return f
+    return _wrap
+
+def fannotate(*args, **kwargs):
+    '''Set function annotations using decorators.
+       
+       :param \*args: The first positional argument is used for the function's return value; all others are discarded.
+       
+       :param \**kwargs: This is a mapping of argument names to annotations.
+       
+       Example::
+           
+           @annotate('This for the return value', a='Parameter a', b='Parameter b')
+           def x(a, b):
+               pass
+       
+       '''
+    def _wrap(f):
+        if not hasattr(f, '__annotations__'):
+            f.__annotations__ = {}
+        if len(args) >= 1:
+            f.__annotations__['return'] = args[0]
         f.__annotations__.update(kwargs)
         return f
     return _wrap
@@ -398,4 +411,16 @@ def safe_unpack(seq, ln, fill=None):
         return seq + type(seq)([fill]*(ln-len(seq)))
     else:
         return seq
+
+def assign(varname, value):
+    '''Assign `value` to `varname` and return it. Can be used to emulate assignment as an expression. For example, this::
+          
+          if assign('x', 7): ...
+       
+       is equilavent to this C code::
+          
+          if (x = 7) ...
+    '''
+    inspect.stack()[1][0].f_globals[varname] = value
+    return value
 

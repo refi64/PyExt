@@ -74,7 +74,7 @@ Switch statements are just as easy as everything else:
 
 .. code-block:: python
    
-   with switch('myval') as case:
+   with switch('myval'):
        if case(1): print 'Huh?'
        if case(2): print 'What the...'
        if case('myval'): print "That's better!"
@@ -100,7 +100,7 @@ PyExt lets you use Python 3's function annotations...on Python 2! Here is an exa
 
 .. code-block:: python
    
-   @annotate('a', b=1, ret='ret')
+   @fannotate('ret', a='a', b=1,)
    def x(a, b):
       return 0
 
@@ -110,8 +110,6 @@ This is equilavent to:
    
    def x(a:'a', b:1) -> 'ret':
       return 0
-
-Notice that, in the PyExt example, the first argument isn't a keyword arg. This is because PyExt automatically maps varargs to the equilavent function arguments.
 
 Safe unpacking
 **************
@@ -159,3 +157,25 @@ You can also specify a value other than ``None`` to fill in the extra spaces:
 .. code-block:: python
    
    a, b = safe_unpack(my_tuple, 2, fill='')
+
+Expression assignment
+*********************
+
+Languages such as C and C++ allow you to use an assignment as an expression. For people who don't know what that means, here's an example, in C:
+
+.. code-block:: c
+   
+   if (my_var = my_func())
+
+This is equilavent to the following Python code:
+
+.. code-block:: python
+   
+   my_var = my_func()
+   if my_var:
+
+PyExt lets you do it the easy way:
+
+.. code-block:: python
+   
+   if assign('my_var', my_func()):

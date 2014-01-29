@@ -6,6 +6,8 @@ PyExt
 
 Several simple extensions that add some nifty features to Python.
 
+NEWS: There is now a PyExt newsgroup on Google Groups. See https://groups.google.com/forum/#!forum/pyext.
+
 Some features:
 
 - Function overloading
@@ -36,7 +38,7 @@ Switch statement::
 
 Function annotations::
    
-   @annotate(a=1, b=2, ret='return annotation')
+   @fannotate('Return annotation', a=1, b=2)
    def x(a, b):
        return 0
 

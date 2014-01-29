@@ -43,7 +43,7 @@ class TestPyExt(unittest.TestCase):
             if case('x'): x = 4
         self.assertEqual(x, 4)
     def test_annot(self):
-        @annotate('a', 'b', b=1, c=2, ret='r')
+        @fannotate('r', a='a' b=1, c=2)
         def x(a, b, c): pass
         self.assertEqual(x.__annotations__, {'a': 'a', 'b': 1, 'c': 2, 'return': 'r'})
     def test_unpack(self):
@@ -51,6 +51,9 @@ class TestPyExt(unittest.TestCase):
         self.assertEqual(safe_unpack(t,2), (1,2))
         self.assertEqual(safe_unpack(t,4), (1,2,3,None))
         self.assertEqual(safe_unpack(t,4,fill=0), (1,2,3,0))
+    def test_assign(self):
+        self.assertEqual(assign('x', 7), 7)
+        self.assertEqual(globals().get('x'), 7)
     if sys.version_info.major == 3:
         def test_overload_args_annot(self):
             def x(a, b): return 0
