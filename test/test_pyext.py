@@ -43,7 +43,7 @@ class TestPyExt(unittest.TestCase):
             if case('x'): x = 4
         self.assertEqual(x, 4)
     def test_annot(self):
-        @fannotate('r', a='a' b=1, c=2)
+        @fannotate('r', a='a', b=1, c=2)
         def x(a, b, c): pass
         self.assertEqual(x.__annotations__, {'a': 'a', 'b': 1, 'c': 2, 'return': 'r'})
     def test_unpack(self):
