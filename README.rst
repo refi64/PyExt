@@ -32,9 +32,10 @@ Function overloading::
 Switch statement::
    
    with switch(1):
-       if case(0): print 'Awkward...'
+       if case(0): print 'Awkward...'; case.quit() # case.quit() is the same as break
        if case(2): print '???'
        if case(1): print 'Phew! It works!'
+       if case.default(): print 'Ummmm...'
 
 Function annotations::
    

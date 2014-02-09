@@ -35,13 +35,23 @@ class TestPyExt(unittest.TestCase):
         self.assertEqual(m.f, 2)
         self.assertTrue(isinstance(m, types.ModuleType))
         self.assertEqual(m.__doc__, 'doc')
+        m2 = RuntimeModule.from_string('s', 'doc', 'a=7; b=6')
+        self.assertEqual(m2.a, 7)
+        self.assertEqual(m2.b, 6)
     def test_switch(self):
         with switch('x'):
-            if case('a'): x = 1
+            if case('x'): x = 4; case.quit()
             if case('b'): x = 2
             if case(1): x = 3
-            if case('x'): x = 4
+            if case('a'): x = 1
+            if case('x'): x = 0
         self.assertEqual(x, 4)
+        with switch(1):
+            if case.default(): x = 7
+        self.assertEqual(x, 7)
+        with switch(2):
+            if case(1,2): x = 9
+        self.assertEqual(x, 9)
     def test_annot(self):
         @fannotate('r', a='a', b=1, c=2)
         def x(a, b, c): pass
@@ -53,7 +63,11 @@ class TestPyExt(unittest.TestCase):
         self.assertEqual(safe_unpack(t,4,fill=0), (1,2,3,0))
     def test_assign(self):
         self.assertEqual(assign('x', 7), 7)
-        self.assertEqual(globals().get('x'), 7)
+        self.assertEqual(x, 7)
+        global f
+        def f(): pass
+        self.assertEqual(assign('f.__annotations__', {'a': 1}), {'a': 1})
+        self.assertEqual(f.__annotations__, {'a': 1})
     if sys.version_info.major == 3:
         def test_overload_args_annot(self):
             def x(a, b): return 0

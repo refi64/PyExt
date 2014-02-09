@@ -22,6 +22,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 g_backup = globals().copy()
 
+__version__ = '0.6'
+
 __all__ = ['overload', 'RuntimeModule', 'switch', 'tail_recurse', 'copyfunc', 'set_docstring', 'annotate', 'safe_unpack', 'modify_function', 'assign', 'fannotate']
 
 import sys, inspect, types
@@ -88,12 +90,11 @@ if sys.version_info.major == 3:
         return newf
     def argspec(f):
         return inspect.getfullargspec(f)
-    def _exec(s, g):
-        exec(s, g)
     ofullargspec = inspect.getfullargspec
     def _fullargspec(func):
         return __targspec(func, ofullargspec)
     inspect.getfullargspec = _fullargspec
+    def _exec(m,g): exec(m,g)
 else:
     @set_docstring(__modify_function_doc)
     def modify_function(f, globals={}, name=None, code=None, defaults=None,
@@ -108,7 +109,7 @@ else:
         return newf
     def argspec(f):
         return inspect.getargspec(f)
-    eval(compile('def _exec(s, g): exec s in g', '<exec_function>', 'exec'))
+    eval(compile('def _exec(m,g): exec m in g', '<exec>', 'exec'))
 
 def _gettypes(args):
     return tuple(map(type, args))
@@ -131,10 +132,11 @@ else:
         return __targspec(func, oipyargspec, '__orig_arg_ipy__')
     IPython.core.oinspect.getargspec = _ipyargspec
 
-class _overload(object):
+class overload(object):
     '''Simple function overloading in Python.'''
     _items = {}
     _types = {}
+    @classmethod
     def argc(self, argc=None):
         '''Overloads a function based on the specified argument count.
 
@@ -178,6 +180,7 @@ class _overload(object):
                 _newf.__orig_arg_ipy__ = IPython.core.oinspect.getargspec(f)
             return _newf
         return _wrap
+    @classmethod
     def args(self, *argtypes):
         '''Overload a function based on the specified argument types.
 
@@ -224,8 +227,6 @@ class _overload(object):
             return _newf
         return _wrap
 
-overload = _overload()
-
 class _RuntimeModule(object):
     'Create a module object at runtime and insert it into sys.path. If called, same as :py:func:`from_objects`.'
     def __call__(self, *args, **kwargs):
@@ -243,7 +244,7 @@ class _RuntimeModule(object):
            
            :param docstring: Optional. The module's docstring.
            
-           :param d: All the keyword args, mapped from name->value.
+           :param \*\*d: All the keyword args, mapped from name->value.
            
            Example: ``RuntimeModule.from_objects('name', 'doc', a=1, b=2)``'''
         module = types.ModuleType(name, docstring)
@@ -272,11 +273,21 @@ class _RuntimeModule(object):
 RuntimeModule = _RuntimeModule()
 
 class CaseObject(object):
-    'The object returned by a switch statement. When called, it will return True if the given argument equals its value, else False.'
+    'The object returned by a switch statement. When called, it will return True if the given argument equals its value, else False. It can be called with multiple parameters, in which case it checks if its value equals any of the arguments.'
     def __init__(self, value):
         self.value = value
-    def __call__(self, other):
-        return self.value == other
+        self.did_match = False
+        self.did_pass = False
+    def __call__(self, *args):
+        if assign('res', not self.did_pass and any([self.value == rhs for rhs in args])):
+            self.did_match = True
+        return res
+    def quit(self):
+        'Forces all other calls to return False. Equilavent of a ``break`` statement.'
+        self.did_pass = True
+    def default(self):
+        "Executed if quit wasn't called."
+        return not self.did_match and not self.did_pass
     def __iter__(self):
         yield self
     def __enter__(self):
@@ -284,8 +295,8 @@ class CaseObject(object):
     def __exit__(self, *args):
         pass
 
-class _switch(object):
-    '''A Python switch statement implementation that is usedr with a ``with`` statement.
+def switch(value):
+    '''A Python switch statement implementation that is used with a ``with`` statement.
 
        :param value: The value to "switch".
 
@@ -296,12 +307,9 @@ class _switch(object):
                if case('x'): print 'It works!!!'
        
        .. warning:: If you modify a variable named "case" in the same scope that you use the ``with`` statement version, you will get an UnboundLocalError. The soluction is to use ``with switch('x') as case:`` instead of ``with switch('x'):``.'''
-    def __call__(self, value):
-        res = CaseObject(value)
-        inspect.stack()[1][0].f_globals['case'] = res
-        return res
-
-switch = _switch()
+    res = CaseObject(value)
+    inspect.stack()[1][0].f_globals['case'] = res
+    return res
 
 def tail_recurse(spec=None):
     '''Remove tail recursion from a function.
@@ -311,6 +319,10 @@ def tail_recurse(spec=None):
        .. note::
            
            This function has a slight overhead that is noticable when using timeit. Only use it if the function has a possibility of going over the recursion limit.
+       
+       .. warning::
+           
+           This function will BREAK any code that either uses any recursion other than tail recursion or calls itself multiple times. For example, ``def x(): return x()+1`` will fail.
 
        Example::
 
@@ -372,7 +384,7 @@ def fannotate(*args, **kwargs):
        
        Example::
            
-           @annotate('This for the return value', a='Parameter a', b='Parameter b')
+           @fannotate('This for the return value', a='Parameter a', b='Parameter b')
            def x(a, b):
                pass
        
@@ -413,14 +425,29 @@ def safe_unpack(seq, ln, fill=None):
         return seq
 
 def assign(varname, value):
-    '''Assign `value` to `varname` and return it. Can be used to emulate assignment as an expression. For example, this::
+    '''Assign `value` to `varname` and return it. If `varname` is an attribute and the instance name it belongs to is not defined, a NameError is raised.
+       This can be used to emulate assignment as an expression. For example, this::
           
           if assign('x', 7): ...
        
        is equilavent to this C code::
           
-          if (x = 7) ...
+          if (x = 7) ...  
+       
+       .. warning::
+          
+          When assigning an attribute, the instance it belongs to MUST be declared as global prior to the assignment. Otherwise, the assignment will not work.
     '''
-    inspect.stack()[1][0].f_globals[varname] = value
+    fd = inspect.stack()[1][0].f_globals
+    if '.' not in varname:
+        fd[varname] = value
+    else:
+        vsplit = list(map(str.strip, varname.split('.')))
+        if vsplit[0] not in fd:
+            raise NameError('Unknown object: %s'%vsplit[0])
+        base = fd[vsplit[0]]
+        for x in vsplit[1:-1]:
+            base = getattr(base, x)
+        setattr(base, vsplit[-1], value)
     return value
 
