@@ -6,9 +6,17 @@ PyExt
 
 Several simple extensions that add some nifty features to Python.
 
-NEWS: There is now a PyExt newsgroup on Google Groups. See https://groups.google.com/forum/#!forum/pyext.
+Links:
+******
 
-Some features:
+========= =============================================
+GitHub    https://github.com/kirbyfan64/PyExt
+PyPI      https://pypi.python.org/pypi/pyext
+Newsgroup https://groups.google.com/forum/#!forum/pyext
+========= =============================================
+
+Features:
+*********
 
 - Function overloading
 - Switch statement
@@ -16,8 +24,10 @@ Some features:
 - Tail recursion removal
 - Python 2 function annotations
 - Python 2 safe tuple unpacking
+- Assignment if condition is true
 
 Examples:
+*********
 
 Function overloading::
    
@@ -43,8 +53,8 @@ Function annotations::
    def x(a, b):
        return 0
 
-TODO:
-
-- Add some more tests
+Assign if condition is true::
+   
+   compare_and_swap('my_var', None, 2) # set my_var to 2 if it equals None
 
 .. note:: Please ignore this project's messy commit history(several commits under invalid_email_address, about 20 commits labeled Initial). I was trying to use hg-git and kept goofing stuff up.

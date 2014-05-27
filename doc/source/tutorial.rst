@@ -43,6 +43,20 @@ If you're in Python 3, you can also use function annotations by passing ``None``
    x(1)
    x('s')
 
+If you are overloading a class method, you need to pass ``is_cls`` as ``True``:
+
+.. code-block:: python
+   
+   class x(object):
+       @overload.args(str, is_cls=True)
+       def f(self, s): print 'Got string'
+       @overload.args(int, is_cls=True)
+       def f(self, i): print 'Got int'
+   
+   obj = x()
+   x.f('s')
+   x.f(2)
+
 Runtime Modules
 ***************
 
@@ -226,3 +240,19 @@ PyExt lets you do it the easy way:
 .. code-block:: python
    
    if assign('my_var', my_func()):
+
+Swap if condition
+*****************
+
+Code like this is more than often encountered:
+
+.. code-block:: python
+   
+   if my_variable == some_value:
+       my_variable = some_other_value
+
+Using PyExt, that code gets shortened to:
+
+.. code-block:: python
+   
+   compare_and_swap('my_variable', some_value, some_other_value)

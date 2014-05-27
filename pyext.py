@@ -22,9 +22,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 g_backup = globals().copy()
 
-__version__ = '0.6'
+__version__ = '0.7'
 
-__all__ = ['overload', 'RuntimeModule', 'switch', 'tail_recurse', 'copyfunc', 'set_docstring', 'annotate', 'safe_unpack', 'modify_function', 'assign', 'fannotate']
+__all__ = ['overload', 'RuntimeModule', 'switch', 'tail_recurse', 'copyfunc', 'set_docstring', 'annotate', 'safe_unpack', 'modify_function', 'assign', 'fannotate', 'compare_and_swap', 'is_main', 'call_if_main', 'run_main']
 
 import sys, inspect, types
 
@@ -35,11 +35,11 @@ def __targspec(func, specs, attr='__orig_arg__'):
 
 def set_docstring(doc):
     '''A simple decorator to set docstrings.
-       
+
        :param doc: The docstring to tie to the function.
-       
+
        Example::
-          
+
           @set_docstring('This is a docstring')
           def myfunc(x):
               pass'''
@@ -66,11 +66,11 @@ Creates a copy of a function, changing its attributes.
 
 def copyfunc(f):
    '''Copies a funcion.
-      
+
       :param f: The function to copy.
-      
+
       :return: The copied function.
-      
+
       .. deprecated:: 0.4
          Use :func:`modify_function` instead.
       '''
@@ -141,17 +141,17 @@ class overload(object):
         '''Overloads a function based on the specified argument count.
 
            :param argc: The argument count. Defaults to ``None``. If ``None`` is given, automatically compute the argument count from the given function.
-           
+
            .. note::
-              
+
               Keyword argument counts are NOT checked! In addition, when the argument count is automatically calculated, the keyword argument count is also ignored!
-               
+
            Example::
 
                @overload.argc()
                def func(a):
                    print 'Function 1 called'
-               
+
                @overload.argc()
                def func(a, b):
                    print 'Function 2 called'
@@ -181,11 +181,12 @@ class overload(object):
             return _newf
         return _wrap
     @classmethod
-    def args(self, *argtypes):
+    def args(self, *argtypes, **kw):
         '''Overload a function based on the specified argument types.
 
            :param argtypes: The argument types. If None is given, get the argument types from the function annotations(Python 3 only)
-           
+           :param kw: Can only contain 1 argument, `is_cls`. If True, the function is assumed to be part of a class.
+
            Example::
 
                @overload.args(str)
@@ -203,14 +204,22 @@ class overload(object):
                func('s')
                func(1)
                func(1, 's')
-               func(True) # Raises error'''
+               func(True) # Raises error
+            '''
+
         # Python 2 UnboundLocalError fix...again!
         argtypes = {'args': tuple(argtypes)}
         def _wrap(f):
             def _newf(*args):
-                if _gettypes(args) not in self._types[f.__name__]:
-                    raise TypeError("No overload of function '%s' that takes '%s' types and %d arg(s)" % (f.__name__, _gettypes(args), len(args)))
-                return self._types[f.__name__][_gettypes(args)](*args)
+                if len(kw) == 0:
+                    cargs = args
+                elif len(kw) == 1 and 'is_cls' in kw and kw['is_cls']:
+                    cargs = args[1:]
+                else:
+                    raise ValueError('Invalid keyword args specified')
+                if _gettypes(cargs) not in self._types[f.__name__]:
+                    raise TypeError("No overload of function '%s' that takes '%s' types and %d arg(s)" % (f.__name__, _gettypes(cargs), len(cargs)))
+                return self._types[f.__name__][_gettypes(cargs)](*args)
             if f.__name__ not in self._types:
                 self._types[f.__name__] = {}
             if len(argtypes['args']) == 1 and argtypes['args'][0] is None:
@@ -239,13 +248,13 @@ class _RuntimeModule(object):
     @overload.argc(2)
     def from_objects(name, docstring, **d):
         '''Create a module at runtime from `d`.
-           
+
            :param name: The module name.
-           
+
            :param docstring: Optional. The module's docstring.
-           
+
            :param \*\*d: All the keyword args, mapped from name->value.
-           
+
            Example: ``RuntimeModule.from_objects('name', 'doc', a=1, b=2)``'''
         module = types.ModuleType(name, docstring)
         module.__dict__.update(d)
@@ -260,7 +269,7 @@ class _RuntimeModule(object):
     @overload.argc(3)
     def from_string(name, docstring, s):
         '''Create a module at runtime from `s``.
-           
+
            :param name: The module name.
 
            :param docstring: Optional. The module docstring.
@@ -305,7 +314,7 @@ def switch(value):
            with switch('x'):
                if case(1): print 'Huh?'
                if case('x'): print 'It works!!!'
-       
+
        .. warning:: If you modify a variable named "case" in the same scope that you use the ``with`` statement version, you will get an UnboundLocalError. The soluction is to use ``with switch('x') as case:`` instead of ``with switch('x'):``.'''
     res = CaseObject(value)
     inspect.stack()[1][0].f_globals['case'] = res
@@ -315,13 +324,13 @@ def tail_recurse(spec=None):
     '''Remove tail recursion from a function.
 
        :param spec: A function that, when given the arguments, returns a bool indicating whether or not to exit. If ``None,`` tail recursion is always called unless the function returns a value.
-       
+
        .. note::
-           
+
            This function has a slight overhead that is noticable when using timeit. Only use it if the function has a possibility of going over the recursion limit.
-       
+
        .. warning::
-           
+
            This function will BREAK any code that either uses any recursion other than tail recursion or calls itself multiple times. For example, ``def x(): return x()+1`` will fail.
 
        Example::
@@ -357,14 +366,14 @@ def tail_recurse(spec=None):
 
 def annotate(*args, **kwargs):
     '''Set function annotations using decorators.
-       
+
        :param args: This is a list of annotations for the function, in the order of the function's parameters. For example, ``annotate('Annotation 1', 'Annotation 2')`` will set the annotations of parameter 1 of the function to ``Annotation 1``.
-       
+
        :param kwargs: This is a mapping of argument names to annotations. Note that these are applied *after* the argument list, so any args set that way will be overriden by this mapping. If there is a key named `ret`, that will be the annotation for the function's return value.
-       
+
        .. deprecated:: 0.5
          Use :func:`fannotate` instead.
-'''       
+'''
     def _wrap(f):
         if not hasattr(f, '__annotations__'):
             f.__annotations__ = {}
@@ -377,17 +386,17 @@ def annotate(*args, **kwargs):
 
 def fannotate(*args, **kwargs):
     '''Set function annotations using decorators.
-       
+
        :param \*args: The first positional argument is used for the function's return value; all others are discarded.
-       
+
        :param \**kwargs: This is a mapping of argument names to annotations.
-       
+
        Example::
-           
+
            @fannotate('This for the return value', a='Parameter a', b='Parameter b')
            def x(a, b):
                pass
-       
+
        '''
     def _wrap(f):
         if not hasattr(f, '__annotations__'):
@@ -400,15 +409,15 @@ def fannotate(*args, **kwargs):
 
 def safe_unpack(seq, ln, fill=None):
     '''Safely unpack a sequence to length `ln`, without raising ValueError. Based on Lua's method of unpacking. Empty values will be filled in with `fill`, while any extra values will be cut off.
-       
+
        :param seq: The sequence to unpack.
-       
+
        :param ln: The expected length of the sequence.
-       
+
        :param fill: The value to substitute if the sequence is too small. Defaults to ``None``.
-       
+
        Example::
-           
+
            s = 'a:b'
            a, b = safe_unpack(s.split(':'), 2)
            # a = 'a'
@@ -427,15 +436,15 @@ def safe_unpack(seq, ln, fill=None):
 def assign(varname, value):
     '''Assign `value` to `varname` and return it. If `varname` is an attribute and the instance name it belongs to is not defined, a NameError is raised.
        This can be used to emulate assignment as an expression. For example, this::
-          
+
           if assign('x', 7): ...
-       
+
        is equilavent to this C code::
-          
-          if (x = 7) ...  
-       
+
+          if (x = 7) ...
+
        .. warning::
-          
+
           When assigning an attribute, the instance it belongs to MUST be declared as global prior to the assignment. Otherwise, the assignment will not work.
     '''
     fd = inspect.stack()[1][0].f_globals
@@ -451,3 +460,22 @@ def assign(varname, value):
         setattr(base, vsplit[-1], value)
     return value
 
+def is_main(frame=1):
+    "Return if the caller is main. Equilavent to ``__name__ == '__main__'``."
+    return inspect.stack()[frame][0].f_globals['__name__'] == '__main__'
+
+def _call_if_main(frame, f, args):
+    if is_main(frame): return f(*args)
+
+def call_if_main(f,*args):
+    "Call the `f` with `args` if the caller's module is main."
+    return _call_if_main(3,f,args)
+
+def run_main(f,*args):
+    "Call `f` with the `args` and terminate the program with its return code if the caller's module is main."
+    sys.exit(_call_if_main(3,f,args))
+
+def compare_and_swap(var, compare, new):
+    "If `var` is equal to `compare`, set it to `new`."
+    if assign('v', inspect.stack()[1][0].f_globals)[var] == compare:
+        v[var] = new

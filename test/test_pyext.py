@@ -29,6 +29,13 @@ class TestPyExt(unittest.TestCase):
         self.assertEqual(f('s', 0), (str, int))
         self.assertRaises(TypeError, f, 0, 's')
         self.assertEqual(len(inspect.getargspec(f).args), 0)
+        class x(object):
+            @overload.args(str, is_cls=True)
+            def f(self, s): return 1
+            @overload.args(int, is_cls=True)
+            def f(self, i): return 2
+        self.assertEqual(x().f('s'), 1)
+        self.assertEqual(x().f(1), 2)
     def test_module(self):
         m = RuntimeModule('s', 'doc', x=1, f=2)
         self.assertEqual(m.x, 1)
@@ -68,6 +75,13 @@ class TestPyExt(unittest.TestCase):
         def f(): pass
         self.assertEqual(assign('f.__annotations__', {'a': 1}), {'a': 1})
         self.assertEqual(f.__annotations__, {'a': 1})
+    def test_compare_and_swap(self):
+        global v
+        v = None
+        compare_and_swap('v', None, 7)
+        self.assertEqual(v, 7)
+        compare_and_swap('v', None, 8)
+        self.assertEqual(v, 7)
     if sys.version_info.major == 3:
         def test_overload_args_annot(self):
             def x(a, b): return 0
