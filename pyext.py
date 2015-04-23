@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2014 Ryan Gonzalez
+Copyright (C) 2015 Ryan Gonzalez
 
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
