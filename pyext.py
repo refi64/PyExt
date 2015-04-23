@@ -24,11 +24,14 @@ g_backup = globals().copy()
 
 __version__ = '0.8'
 
-__all__ = ['overload', 'RuntimeModule', 'switch', 'tail_recurse', 'copyfunc', 'set_docstring', 'annotate', 'safe_unpack', 'modify_function', 'assign', 'fannotate', 'compare_and_swap', 'is_main', 'call_if_main', 'run_main']
+__all__ = ['overload', 'RuntimeModule', 'switch', 'tail_recurse', 'copyfunc',
+           'set_docstring', 'annotate', 'safe_unpack', 'modify_function',
+           'assign',  'fannotate', 'compare_and_swap', 'is_main',
+           'call_if_main', 'run_main']
 
-import sys, inspect, types
+import sys, inspect, types, functools
 
-def __targspec(func, specs, attr='__orig_arg__'):
+def _targspec(func, specs, attr='__orig_arg__'):
     if hasattr(func, '__is_overload__') and func.__is_overload__:
         return getattr(func, attr)
     return specs(func)
@@ -43,12 +46,12 @@ def set_docstring(doc):
           @set_docstring('This is a docstring')
           def myfunc(x):
               pass'''
-    def _wrap(f):
+    def wrap(f):
         f.__doc__ = doc
         return f
-    return _wrap
+    return wrap
 
-__modify_function_doc = '''
+_modify_function_doc = '''
 Creates a copy of a function, changing its attributes.
 
 :param globals: Will be added to the function's globals.
@@ -77,7 +80,7 @@ def copyfunc(f):
    return modify_function(f)
 
 if sys.version_info.major == 3:
-    @set_docstring(__modify_function_doc)
+    @set_docstring(_modify_function_doc)
     def modify_function(f, globals={}, name=None, code=None, defaults=None,
                         closure=None):
         if code is None: code = f.__code__
@@ -88,27 +91,25 @@ if sys.version_info.major == 3:
                                   argdefs=defaults, closure=closure)
         newf.__dict__.update(f.__dict__)
         return newf
-    def argspec(f):
-        return inspect.getfullargspec(f)
+    argspec = inspect.getfullargspec
     ofullargspec = inspect.getfullargspec
     def _fullargspec(func):
-        return __targspec(func, ofullargspec)
+        return _targspec(func, ofullargspec)
     inspect.getfullargspec = _fullargspec
     def _exec(m,g): exec(m,g)
 else:
-    @set_docstring(__modify_function_doc)
+    @set_docstring(_modify_function_doc)
     def modify_function(f, globals={}, name=None, code=None, defaults=None,
                         closure=None):
         if code is None: code = f.func_code
         if name is None: name = f.__name__
         if defaults is None: defaults = f.func_defaults
         if closure is None: closure = f.func_closure
-        newf = types.FunctionType(code, dict(f.func_globals, **globals), name=name,
-                                  argdefs=defaults, closure=closure)
+        newf = types.FunctionType(code, dict(f.func_globals, **globals),
+                                  name=name, argdefs=defaults, closure=closure)
         newf.__dict__.update(f.__dict__)
         return newf
-    def argspec(f):
-        return inspect.getargspec(f)
+    argspec = inspect.getargspec
     eval(compile('def _exec(m,g): exec m in g', '<exec>', 'exec'))
 
 def _gettypes(args):
@@ -117,7 +118,7 @@ def _gettypes(args):
 oargspec = inspect.getargspec
 
 def _argspec(func):
-    return __targspec(func, oargspec)
+    return _targspec(func, oargspec)
 
 inspect.getargspec = _argspec
 
@@ -129,7 +130,7 @@ else:
     # Replace IPython's argspec
     oipyargspec = IPython.core.oinspect.getargspec
     def _ipyargspec(func):
-        return __targspec(func, oipyargspec, '__orig_arg_ipy__')
+        return _targspec(func, oipyargspec, '__orig_arg_ipy__')
     IPython.core.oinspect.getargspec = _ipyargspec
 
 class overload(object):
@@ -225,7 +226,8 @@ class overload(object):
             if len(argtypes['args']) == 1 and argtypes['args'][0] is None:
                 aspec = argspec(f)
                 argtypes['args'] = tuple(map(lambda x: x[1], sorted(
-                    aspec.annotations.items(), key=lambda x: aspec.args.index(x[0]))))
+                    aspec.annotations.items(),
+                    key=lambda x: aspec.args.index(x[0]))))
             self._types[f.__name__][argtypes['args']] = f
             _newf.__name__ = f.__name__
             _newf.__doc__ = f.__doc__
@@ -277,7 +279,8 @@ class _RuntimeModule(object):
            :param s: A string containing the module definition.'''
         g = {}
         _exec(s, g)
-        return _RuntimeModule.from_objects(name, docstring, **dict(filter(lambda x: x[0] not in g_backup, g.items())))
+        return _RuntimeModule.from_objects(name, docstring,
+                    **dict(filter(lambda x: x[0] not in g_backup, g.items())))
 
 RuntimeModule = _RuntimeModule()
 
@@ -398,14 +401,14 @@ def fannotate(*args, **kwargs):
                pass
 
        '''
-    def _wrap(f):
+    def wrap(f):
         if not hasattr(f, '__annotations__'):
             f.__annotations__ = {}
         if len(args) >= 1:
             f.__annotations__['return'] = args[0]
         f.__annotations__.update(kwargs)
         return f
-    return _wrap
+    return wrap
 
 def safe_unpack(seq, ln, fill=None):
     '''Safely unpack a sequence to length `ln`, without raising ValueError. Based on Lua's method of unpacking. Empty values will be filled in with `fill`, while any extra values will be cut off.
