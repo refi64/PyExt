@@ -135,8 +135,6 @@ else:
 
 class overload(object):
     '''Simple function overloading in Python.'''
-    _items = {}
-    _types = {}
     @classmethod
     def argc(self, argc=None):
         '''Overloads a function based on the specified argument count.
@@ -163,24 +161,37 @@ class overload(object):
                '''
         # Python 2 UnboundLocalError fix
         argc = {'argc': argc}
-        def _wrap(f):
-            def _newf(*args, **kwargs):
-                if len(args) not in self._items[f.__name__]:
-                    raise TypeError("No overload of function '%s' that takes %d args" % (f.__name__, len(args)))
-                return self._items[f.__name__][len(args)](*args, **kwargs)
-            if f.__name__ not in self._items:
-                self._items[f.__name__] = {}
+        def wrap(f):
             if argc['argc'] is None:
                 argc['argc'] = len(argspec(f).args)
-            self._items[f.__name__][argc['argc']] = f
-            _newf.__name__ = f.__name__
-            _newf.__doc__ = f.__doc__
-            _newf.__is_overload__ = True
-            _newf.__orig_arg__ = argspec(f)
+            try:
+                st = inspect.stack()[1][0]
+                oldf = dict(st.f_globals, **st.f_locals)[f.__name__]
+            except KeyError: pass
+            else:
+                if hasattr(oldf, '__pyext_overload_basic__'):
+                    closure = oldf.__closure__ if sys.version_info.major == 3\
+                              else oldf.func_closure
+                    for x in closure:
+                        cell = x.cell_contents
+                        if isinstance(cell, dict):
+                            cell[argc['argc']] = f
+                            return oldf
+            overloads = {}
+            @functools.wraps(f)
+            def newf(*args, **kwargs):
+                if len(args) not in overloads:
+                    raise TypeError(
+                        "No overload of function '%s' that takes %d args" % (
+                            f.__name__, len(args)))
+                return overloads[len(args)](*args, **kwargs)
+            overloads[argc['argc']] = f
+            newf.__pyext_overload_basic__ = None
+            newf.__orig_arg__ = argspec(f)
             if IPython:
-                _newf.__orig_arg_ipy__ = IPython.core.oinspect.getargspec(f)
-            return _newf
-        return _wrap
+                newf.__orig_arg_ipy__ = IPython.core.oinspect.getargspec(f)
+            return newf
+        return wrap
     @classmethod
     def args(self, *argtypes, **kw):
         '''Overload a function based on the specified argument types.
@@ -208,35 +219,51 @@ class overload(object):
                func(True) # Raises error
             '''
 
+        # XXX: some of this should be moved to a utility class
+        # It's duplicated from overload.argc
         # Python 2 UnboundLocalError fix...again!
         argtypes = {'args': tuple(argtypes)}
-        def _wrap(f):
-            def _newf(*args):
+        def wrap(f):
+            if len(argtypes['args']) == 1 and argtypes['args'][0] is None:
+                aspec = argspec(f)
+                argtypes['args'] = tuple(map(lambda x: x[1], sorted(
+                    aspec.annotations.items(),
+                    key=lambda x: aspec.args.index(x[0]))))
+            try:
+                st = inspect.stack()[1][0]
+                oldf = dict(st.f_globals, **st.f_locals)[f.__name__]
+            except KeyError: pass
+            else:
+                if hasattr(oldf, '__pyext_overload_args__'):
+                    closure = oldf.__closure__ if sys.version_info.major == 3\
+                              else oldf.func_closure
+                    for x in closure:
+                        cell = x.cell_contents
+                        if isinstance(cell, dict) and cell != kw:
+                            cell[argtypes['args']] = f
+                            return oldf
+            overloads = {}
+            @functools.wraps(f)
+            def newf(*args):
                 if len(kw) == 0:
                     cargs = args
                 elif len(kw) == 1 and 'is_cls' in kw and kw['is_cls']:
                     cargs = args[1:]
                 else:
                     raise ValueError('Invalid keyword args specified')
-                if _gettypes(cargs) not in self._types[f.__name__]:
-                    raise TypeError("No overload of function '%s' that takes '%s' types and %d arg(s)" % (f.__name__, _gettypes(cargs), len(cargs)))
-                return self._types[f.__name__][_gettypes(cargs)](*args)
-            if f.__name__ not in self._types:
-                self._types[f.__name__] = {}
-            if len(argtypes['args']) == 1 and argtypes['args'][0] is None:
-                aspec = argspec(f)
-                argtypes['args'] = tuple(map(lambda x: x[1], sorted(
-                    aspec.annotations.items(),
-                    key=lambda x: aspec.args.index(x[0]))))
-            self._types[f.__name__][argtypes['args']] = f
-            _newf.__name__ = f.__name__
-            _newf.__doc__ = f.__doc__
-            _newf.__is_overload__ = True
-            _newf.__orig_arg__ = argspec(f)
+                types = _gettypes(cargs)
+                if types not in overloads:
+                    raise TypeError(\
+                        "No overload of function '%s' that takes: %s" % (
+                            f.__name__, types))
+                return overloads[types](*args)
+            overloads[argtypes['args']] = f
+            newf.__pyext_overload_args__ = None
+            newf.__orig_arg__ = argspec(f)
             if IPython:
-                _newf.__orig_arg_ipy__ = IPython.core.oinspect.getargspec(f)
-            return _newf
-        return _wrap
+                newf.__orig_arg_ipy__ = IPython.core.oinspect.getargspec(f)
+            return newf
+        return wrap
 
 class _RuntimeModule(object):
     'Create a module object at runtime and insert it into sys.path. If called, same as :py:func:`from_objects`.'
