@@ -320,7 +320,8 @@ class CaseObject(object):
         self.did_pass = not cstyle
     def __call__(self, *args):
         if not self.cstyle and self.did_match: return False
-        if assign('res', not (self.did_pass and self.cstyle) and any([self.value == rhs for rhs in args])):
+        if assign('res', not (self.did_pass and self.cstyle) and\
+                         self.value in args):
             self.did_match = True
         return res
     def quit(self):
