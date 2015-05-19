@@ -1,0 +1,4 @@
+__pycache__/
+pyext.egg-info/
+pyext.pyc
+test/__pycache__/
