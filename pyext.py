@@ -313,20 +313,22 @@ RuntimeModule = _RuntimeModule()
 
 class CaseObject(object):
     'The object returned by a switch statement. When called, it will return True if the given argument equals its value, else False. It can be called with multiple parameters, in which case it checks if its value equals any of the arguments.'
-    def __init__(self, value):
+    def __init__(self, value, cstyle):
         self.value = value
         self.did_match = False
-        self.did_pass = False
+        self.cstyle = cstyle
+        self.did_pass = not cstyle
     def __call__(self, *args):
-        if assign('res', not self.did_pass and any([self.value == rhs for rhs in args])):
+        if not self.cstyle and self.did_match: return False
+        if assign('res', not (self.did_pass and self.cstyle) and any([self.value == rhs for rhs in args])):
             self.did_match = True
         return res
     def quit(self):
         'Forces all other calls to return False. Equilavent of a ``break`` statement.'
         self.did_pass = True
     def default(self):
-        "Executed if quit wasn't called."
-        return not self.did_match and not self.did_pass
+        "Executed if ``quit`` wasn't called."
+        return not self.did_match and (not self.did_pass if self.cstyle else True)
     def __iter__(self):
         yield self
     def __enter__(self):
@@ -334,10 +336,11 @@ class CaseObject(object):
     def __exit__(self, *args):
         pass
 
-def switch(value):
+def switch(value, cstyle=False):
     '''A Python switch statement implementation that is used with a ``with`` statement.
 
        :param value: The value to "switch".
+       :param cstyle: If ``True``, then cases will automatically fall through to the next one until ``case.quit()`` is encountered.
 
        ``with`` statement example::
 
@@ -346,7 +349,7 @@ def switch(value):
                if case('x'): print 'It works!!!'
 
        .. warning:: If you modify a variable named "case" in the same scope that you use the ``with`` statement version, you will get an UnboundLocalError. The soluction is to use ``with switch('x') as case:`` instead of ``with switch('x'):``.'''
-    res = CaseObject(value)
+    res = CaseObject(value, cstyle)
     inspect.stack()[1][0].f_globals['case'] = res
     return res
 

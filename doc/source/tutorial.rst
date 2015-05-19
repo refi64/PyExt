@@ -89,9 +89,9 @@ Switch statements are just as easy as everything else:
 .. code-block:: python
    
    with switch(3):
-       if case(1): print 'Huh?'; case.quit()
-       if case(2): print 'What the...'; case.quit()
-       if case(3): print "That's better!"; case.quit()
+       if case(1): print 'Huh?'
+       if case(2): print 'What the...'
+       if case(3): print "That's better!"
        if case.default(): print 'Ummm...'
 
 This is equilavent to the following C code:
@@ -109,6 +109,8 @@ This is equilavent to the following C code:
    default:
      puts("Ummm...")
    }
+
+The equivalent of ``break`` is ``case.quit()``. There is an implicit quit at the end of every case. If you want the C-style fallthrough, pass ``cstyle=True`` to the call to ``switch``.
 
 For chaining ``case`` statements, pass multiple arguments to case. For example, this C:
 
@@ -136,8 +138,8 @@ is equilavent to this Python code using PyExt:
 .. code-block:: python
    
    with switch(myvar):
-       if case(1,3,5,7,9): print 'An odd number'; case.quit()
-       if case(2,4,6,8): print 'An even number'; case.quit()
+       if case(1,3,5,7,9): print 'An odd number'
+       if case(2,4,6,8): print 'An even number'
        if case.default(): print 'The number is either greater that 9 or less than 1'
 
 Tail recursion removal

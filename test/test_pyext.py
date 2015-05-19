@@ -49,7 +49,7 @@ def test_module():
 
 def test_switch():
     with switch('x'):
-        if case('x'): x = 4; case.quit()
+        if case('x'): x = 4
         if case('b'): x = 2
         if case(1): x = 3
         if case('a'): x = 1
@@ -61,6 +61,11 @@ def test_switch():
     with switch(2):
         if case(1,2): x = 9
     assert x == 9
+    with switch('x', cstyle=True):
+        if case('x'): x = 4
+        if case('x'): x = 2; case.quit()
+        if case('x'): x = 9
+    assert x == 2
 
 def test_annotate():
     @fannotate('r', a='a', b=1, c=2)
