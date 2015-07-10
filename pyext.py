@@ -170,14 +170,10 @@ class overload(object):
             except KeyError: pass
             else:
                 if hasattr(oldf, '__pyext_overload_basic__'):
-                    closure = oldf.__closure__ if sys.version_info.major == 3\
-                              else oldf.func_closure
-                    for x in closure:
-                        cell = x.cell_contents
-                        if isinstance(cell, dict):
-                            cell[argc['argc']] = f
-                            return oldf
-            overloads = {}
+                    globls = oldf.__globals__ if sys.version_info.major == 3\
+                             else oldf.func_globals
+                    globls['overloads'][argc['argc']] = f
+                    return oldf
             @functools.wraps(f)
             def newf(*args, **kwargs):
                 if len(args) not in overloads:
@@ -185,7 +181,9 @@ class overload(object):
                         "No overload of function '%s' that takes %d args" % (
                             f.__name__, len(args)))
                 return overloads[len(args)](*args, **kwargs)
+            overloads = {}
             overloads[argc['argc']] = f
+            newf = modify_function(newf, globals={'overloads': overloads})
             newf.__pyext_overload_basic__ = None
             newf.__orig_arg__ = argspec(f)
             if IPython:
@@ -235,14 +233,10 @@ class overload(object):
             except KeyError: pass
             else:
                 if hasattr(oldf, '__pyext_overload_args__'):
-                    closure = oldf.__closure__ if sys.version_info.major == 3\
-                              else oldf.func_closure
-                    for x in closure:
-                        cell = x.cell_contents
-                        if isinstance(cell, dict) and cell != kw:
-                            cell[argtypes['args']] = f
-                            return oldf
-            overloads = {}
+                    globls = oldf.__globals__ if sys.version_info.major == 3\
+                             else oldf.func_globals
+                    globls['overloads'][argtypes['args']] = f
+                    return oldf
             @functools.wraps(f)
             def newf(*args):
                 if len(kw) == 0:
@@ -257,7 +251,9 @@ class overload(object):
                         "No overload of function '%s' that takes: %s" % (
                             f.__name__, types))
                 return overloads[types](*args)
+            overloads = {}
             overloads[argtypes['args']] = f
+            newf = modify_function(newf, globals={'overloads': overloads})
             newf.__pyext_overload_args__ = None
             newf.__orig_arg__ = argspec(f)
             if IPython:
