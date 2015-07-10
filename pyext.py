@@ -478,13 +478,15 @@ def assign(varname, value):
           When assigning an attribute, the instance it belongs to MUST be declared as global prior to the assignment. Otherwise, the assignment will not work.
     '''
     fd = inspect.stack()[1][0].f_globals
+    fl = inspect.stack()[1][0].f_locals
     if '.' not in varname:
         fd[varname] = value
     else:
         vsplit = list(map(str.strip, varname.split('.')))
-        if vsplit[0] not in fd:
-            raise NameError('Unknown object: %s'%vsplit[0])
-        base = fd[vsplit[0]]
+        fvars = dict(fd, **fl)
+        if vsplit[0] not in fvars:
+            raise NameError('Unknown object: %s' % vsplit[0])
+        base = fvars[vsplit[0]]
         for x in vsplit[1:-1]:
             base = getattr(base, x)
         setattr(base, vsplit[-1], value)

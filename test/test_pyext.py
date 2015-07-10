@@ -81,7 +81,6 @@ def test_unpack():
 def test_assign():
     assert assign('x', 7) == 7
     assert x == 7
-    global f
     def f(): pass
     assert assign('f.__annotations__', {'a': 1}) == {'a': 1}
     assert f.__annotations__ == {'a': 1}
