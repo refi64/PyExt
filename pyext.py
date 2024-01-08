@@ -30,7 +30,11 @@ __all__ = ['overload', 'RuntimeModule', 'switch', 'tail_recurse', 'copyfunc',
            'call_if_main', 'run_main']
 
 import sys, inspect, types, functools
+import inspect
 
+if not hasattr(inspect, 'getargspec'):
+    inspect.getargspec = inspect.getfullargspec
+           
 def _targspec(func, specs, attr='__orig_arg__'):
     if hasattr(func, '__is_overload__') and func.__is_overload__:
         return getattr(func, attr)
